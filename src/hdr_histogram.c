@@ -165,6 +165,7 @@ static int32_t count_leading_zeros_64(int64_t value)
 #endif
 }
 
+// RP: get bucket index
 static int32_t get_bucket_index(const struct hdr_histogram* h, int64_t value)
 {
     int32_t pow2ceiling = 64 - count_leading_zeros_64(value | h->sub_bucket_mask); /* smallest power of 2 containing value */
@@ -380,7 +381,9 @@ int hdr_calculate_bucket_config(
         return EINVAL;
     }
 
+    // change to test
     cfg->bucket_count = buckets_needed_to_cover_value(highest_trackable_value, cfg->sub_bucket_count, (int32_t)cfg->unit_magnitude);
+    //cfg->bucket_count = 50;
     cfg->counts_len = (cfg->bucket_count + 1) * (cfg->sub_bucket_count / 2);
 
     return 0;
@@ -400,7 +403,7 @@ void hdr_init_preallocated(struct hdr_histogram* h, struct hdr_histogram_bucket_
     h->max_value                       = 0;
     h->normalizing_index_offset        = 0;
     h->conversion_ratio                = 1.0;
-    h->bucket_count                    = cfg->bucket_count;
+    h->bucket_count                    = cfg->bucket_count; //
     h->counts_len                      = cfg->counts_len;
     h->total_count                     = 0;
 }
@@ -505,6 +508,8 @@ bool hdr_record_values(struct hdr_histogram* h, int64_t value, int64_t count)
     }
 
     counts_inc_normalised(h, counts_index, count);
+
+    // RP: this is just to keep track of the min and max values in the histogram
     update_min_max(h, value);
 
     return true;
@@ -1122,7 +1127,6 @@ static bool log_iter_next(struct hdr_iter *iter)
             {
                 return true;
             }
-
             logarithmic->count_added_in_this_iteration_step += iter->count;
         }
         while (true);
@@ -1175,6 +1179,8 @@ int hdr_percentiles_print(
     struct hdr_iter iter;
     struct hdr_iter_percentiles * percentiles;
 
+    int line_count=0;
+
     format_line_string(line_format, 25, h->significant_figures, format);
     head_format = format_head_string(format);
 
@@ -1202,10 +1208,12 @@ int hdr_percentiles_print(
             rc = EIO;
             goto cleanup;
         }
+        line_count++;
     }
 
     if (CLASSIC == format)
     {
+        printf("Line count: %d \n", line_count);
         double mean   = hdr_mean(h)   / value_scale;
         double stddev = hdr_stddev(h) / value_scale;
         double max    = hdr_max(h)    / value_scale;
@@ -1219,6 +1227,39 @@ int hdr_percentiles_print(
         }
     }
 
+
+    cleanup:
+    return rc;
+}
+
+// RP: TEST LOG PRINT
+int hdr_logarithmic_print(
+        struct hdr_histogram* h, int64_t value_units_first_bucket)
+{
+    int rc = 0;
+    struct hdr_iter iter;
+    struct hdr_iter_log * log;
+
+    hdr_iter_log_init(&iter, h, value_units_first_bucket,2.0);
+
+    log = &iter.specifics.log;
+    int32_t index = 0;
+
+    bool finished = false;
+    while(hdr_iter_next(&iter))
+    {
+        struct hdr_iter iterCopy = iter;
+        int64_t total_count = iter.specifics.log.count_added_in_this_iteration_step;
+
+        if (!hdr_iter_next(&iterCopy)) finished = true;
+
+        if (!finished)
+            printf("%lld-%lld: %lld, ",iter.value_iterated_from, iter.value_iterated_to, total_count);
+        else
+            printf("%lld-%lld: %lld. ",iter.value_iterated_from, iter.value_iterated_to, total_count);
+        index++;
+    }
+    printf("\n");
     cleanup:
     return rc;
 }

@@ -10,6 +10,10 @@
 #include <time.h>
 #include <errno.h>
 #include <string.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/resource.h>
+#include <unistd.h>
 
 #include <hdr/hdr_histogram.h>
 #include <hdr/hdr_histogram_log.h>
@@ -19,60 +23,44 @@
 #pragma warning(disable: 4996)
 #endif
 
-int main(int argc, char** argv)
+long get_mem_usage() {
+    struct rusage myusage;
+    getrusage(RUSAGE_SELF, &myusage);
+    return myusage.ru_maxrss;
+}
+//static struct hdr_histogram* histogram = NULL;
+
+
+int main()
 {
-    int rc = 0;
-    FILE* f;
-    struct hdr_log_reader reader;
-    struct hdr_histogram* h = NULL;
-    hdr_timespec timestamp, interval;
+    //srand(time(NULL));
+    /* own test */
+    long initial_usage = get_mem_usage();
+    int i, value;
+    // char* result;
+    struct hdr_histogram* histogram;
 
-    if (argc == 1)
-    {
-        f = stdin;
-    }
-    else
-    {
-        f = fopen(argv[1], "r");
-    }
+    // lower bound: 0ms, upper bound: 900,000ms
+    hdr_init(1, 9000000, 1, &histogram);
 
-    if (!f)
-    {
-        fprintf(stderr, "Failed to open file(%s):%s\n", argv[1], strerror(errno));
-        return -1;
-    }
 
-    if (hdr_log_reader_init(&reader))
+    for (i = 0; i < 100000; i++)
     {
-        fprintf(stderr, "Failed to init reader\n");
-        return -1;
+        value = rand() % 9000000 + 1;
+        hdr_record_value(histogram, value);
     }
+    printf("rusage: %ld + %ld\n", initial_usage, get_mem_usage()-initial_usage);
 
-    rc = hdr_log_read_header(&reader, f);
-    if(rc)
-    {
-        fprintf(stderr, "Failed to read header: %s\n", hdr_strerror(rc));
-        return -1;
-    }
+    // SEE NUMBER OF buckets
 
-    while (true)
-    {
-        rc = hdr_log_read(&reader, f, &h, &timestamp, &interval);
+    int mem = hdr_get_memory_size(histogram);
+    printf("Footprint: %d \n", mem);
 
-        if (0 == rc)
-        {
-            hdr_percentiles_print(h, stdout, 5, 1.0, CLASSIC);
-        }
-        else if (EOF == rc)
-        {
-            break;
-        }
-        else
-        {
-            fprintf(stderr, "Failed to print histogram: %s\n", hdr_strerror(rc));
-            return -1;
-        }
-    }
+    printf("\nPercentiles Printing\n\n");
+    hdr_percentiles_print(histogram,stdout,5,1.0,CLASSIC);
+
+    printf("\n\nLogarithmic Printing\n");
+    hdr_logarithmic_print(histogram,1);
 
     return 0;
 }

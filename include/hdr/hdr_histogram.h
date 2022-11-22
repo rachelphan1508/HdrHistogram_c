@@ -14,6 +14,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+
+// size: 8+8+4+4+4+4+8+4+4+8+8+4+8+4+8+8
 struct hdr_histogram
 {
     int64_t lowest_discernible_value;
@@ -365,6 +367,9 @@ struct hdr_iter_log
     int64_t count_added_in_this_iteration_step;
     int64_t next_value_reporting_level;
     int64_t next_value_reporting_level_lowest_equivalent;
+
+    //RP
+    //int64_t current_step_lowest_value_reporting_level;
 };
 
 /**
@@ -382,6 +387,8 @@ struct hdr_iter
     int32_t counts_index;
     /** snapshot of the length at the time the iterator is created */
     int64_t total_count;
+
+    // count ?
     /** value directly from array for the current counts_index */
     int64_t count;
     /** sum of all of the counts up to and including the count at this index */
@@ -472,6 +479,15 @@ int hdr_percentiles_print(
     struct hdr_histogram* h, FILE* stream, int32_t ticks_per_half_distance,
     double value_scale, format_type format);
 
+int hdr_logarithmic_print(
+    struct hdr_histogram* h, int64_t value_units_first_bucket);
+
+int64_t get_count_between_values(struct hdr_histogram* h, int64_t low, int64_t high);
+// /**
+// * Print out the bucket values and number of items in each bucket.
+// */
+// int hdr_buckets_print(struct hdr_histogram* h);
+//
 /**
 * Internal allocation methods, used by hdr_dbl_histogram.
 */
