@@ -479,15 +479,9 @@ int hdr_percentiles_print(
     struct hdr_histogram* h, FILE* stream, int32_t ticks_per_half_distance,
     double value_scale, format_type format);
 
-int hdr_logarithmic_print(
-    struct hdr_histogram* h, int64_t value_units_first_bucket);
+void hdr_logarithmic_print(
+    struct hdr_histogram* h, int64_t value_units_first_bucket, char* result);
 
-int64_t get_count_between_values(struct hdr_histogram* h, int64_t low, int64_t high);
-// /**
-// * Print out the bucket values and number of items in each bucket.
-// */
-// int hdr_buckets_print(struct hdr_histogram* h);
-//
 /**
 * Internal allocation methods, used by hdr_dbl_histogram.
 */

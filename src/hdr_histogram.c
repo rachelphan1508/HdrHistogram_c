@@ -1233,8 +1233,8 @@ int hdr_percentiles_print(
 }
 
 // RP: TEST LOG PRINT
-int hdr_logarithmic_print(
-        struct hdr_histogram* h, int64_t value_units_first_bucket)
+void hdr_logarithmic_print(
+        struct hdr_histogram* h, int64_t value_units_first_bucket, char* result)
 {
     int rc = 0;
     struct hdr_iter iter;
@@ -1250,16 +1250,18 @@ int hdr_logarithmic_print(
     {
         struct hdr_iter iterCopy = iter;
         int64_t total_count = iter.specifics.log.count_added_in_this_iteration_step;
-
+        char* buf[100];
         if (!hdr_iter_next(&iterCopy)) finished = true;
-
         if (!finished)
-            printf("%lld-%lld: %lld, ",iter.value_iterated_from, iter.value_iterated_to, total_count);
+        {
+            snprintf(buf, 100,"%lld-%lld: %lld, ",iter.value_iterated_from, iter.value_iterated_to, total_count);
+            strcat(result,buf);
+        }
         else
-            printf("%lld-%lld: %lld. ",iter.value_iterated_from, iter.value_iterated_to, total_count);
+        {
+            snprintf(buf, 100,"%lld-%lld: %lld. ",iter.value_iterated_from, iter.value_iterated_to, total_count);
+            strcat(result,buf);
+        }
         index++;
     }
-    printf("\n");
-    cleanup:
-    return rc;
 }
