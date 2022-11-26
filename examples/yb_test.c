@@ -32,14 +32,13 @@ long get_mem_usage() {
 int main()
 {
     //srand(time(NULL));
-    /* own test */
     long initial_usage = get_mem_usage();
     int i, value;
     // char* result;
     struct hdr_histogram* histogram;
 
     // lower bound: 0ms, upper bound: 900,000ms
-    hdr_init(1, 9000000, 1, &histogram);
+    hdr_init(1, 900000, 2, &histogram);
 
 
     for (i = 0; i < 100000; i++)
@@ -47,24 +46,33 @@ int main()
         value = rand() % 9000000 + 1;
         hdr_record_value(histogram, value);
     }
-    printf("rusage: %ld + %ld\n", initial_usage, get_mem_usage()-initial_usage);
+    // hdr_record_value(histogram, 13);
+    // hdr_record_value(histogram, 3);
+    // hdr_record_value(histogram, 3);
+    // hdr_record_value(histogram, 4);
+    printf("rusage: %lld + %lld\n", initial_usage, get_mem_usage()-initial_usage);
 
     // SEE NUMBER OF buckets
+
+    int p95 = hdr_value_at_percentile(histogram, 90.0);
+    printf("p95: %d\n", p95);
+
+    int values[2];
+
+    //hdr_value_at_percentiles(histogram, {95.0, 99.0}, &values, 2)
 
     int mem = hdr_get_memory_size(histogram);
     printf("Footprint: %d \n", mem);
 
     printf("\nPercentiles Printing\n\n");
-    hdr_percentiles_print(histogram,stdout,5,1.0,CLASSIC);
+    hdr_percentiles_print(histogram,stdout,5,1.0);
 
     printf("\n\nLogarithmic Printing\n");
 
     char result[1000];
 
-    hdr_logarithmic_print(histogram,1, &result);
+    yb_get_hdr_histogram(histogram,1, &result);
     printf("%s", result);
-
-    //printf("%s",hdr_logarithmic_print(histogram,1));
 
     return 0;
 }

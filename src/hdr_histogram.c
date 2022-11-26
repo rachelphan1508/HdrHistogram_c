@@ -695,10 +695,13 @@ int64_t hdr_value_at_percentile(const struct hdr_histogram* h, double percentile
     int64_t count_at_percentile =
         (int64_t) (((requested_percentile / 100) * h->total_count) + 0.5);
     int64_t value_from_idx = get_value_from_idx_up_to_count(h, count_at_percentile);
+    printf("val from index: %lld, percentile: %lf \n", value_from_idx, percentile);
     if (percentile == 0.0)
     {
         return lowest_equivalent_value(h, value_from_idx);
     }
+    int64_t v = highest_equivalent_value(h, value_from_idx);
+    printf("v: %lld", v);
     return highest_equivalent_value(h, value_from_idx);
 }
 
@@ -974,7 +977,7 @@ void hdr_iter_percentile_init(struct hdr_iter* iter, const struct hdr_histogram*
     iter->_next_fp = percentile_iter_next;
 }
 
-static void format_line_string(char* str, size_t len, int significant_figures, format_type format)
+static void format_line_string(char* str, size_t len, int significant_figures)
 {
 #if defined(_MSC_VER)
 #define snprintf _snprintf
@@ -982,18 +985,7 @@ static void format_line_string(char* str, size_t len, int significant_figures, f
 #pragma warning(disable: 4996)
 #endif
     const char* format_str = "%s%d%s";
-
-    switch (format)
-    {
-        case CSV:
-            snprintf(str, len, format_str, "%.", significant_figures, "f,%f,%d,%.2f\n");
-            break;
-        case CLASSIC:
-            snprintf(str, len, format_str, "%12.", significant_figures, "f %12f %12d %12.2f\n");
-            break;
-        default:
-            snprintf(str, len, format_str, "%12.", significant_figures, "f %12f %12d %12.2f\n");
-    }
+    snprintf(str, len, format_str, "%12.", significant_figures, "f %12f %12d %12.2f\n");
 #if defined(_MSC_VER)
 #undef snprintf
 #pragma warning(pop)
@@ -1152,16 +1144,9 @@ void hdr_iter_log_init(
 
 /* Printing. */
 
-static const char* format_head_string(format_type format)
+static const char* format_head_string()
 {
-    switch (format)
-    {
-        case CSV:
-            return "%s,%s,%s,%s\n";
-        case CLASSIC:
-        default:
-            return "%12s %12s %12s %12s\n\n";
-    }
+    return "%12s %12s %12s %12s\n\n";
 }
 
 static const char CLASSIC_FOOTER[] =
@@ -1171,7 +1156,7 @@ static const char CLASSIC_FOOTER[] =
 
 int hdr_percentiles_print(
         struct hdr_histogram* h, FILE* stream, int32_t ticks_per_half_distance,
-        double value_scale, format_type format)
+        double value_scale)
 {
     char line_format[25];
     const char* head_format;
@@ -1181,8 +1166,8 @@ int hdr_percentiles_print(
 
     int line_count=0;
 
-    format_line_string(line_format, 25, h->significant_figures, format);
-    head_format = format_head_string(format);
+    format_line_string(line_format, 25, h->significant_figures);
+    head_format = format_head_string();
 
     hdr_iter_percentile_init(&iter, h, ticks_per_half_distance);
 
@@ -1211,20 +1196,17 @@ int hdr_percentiles_print(
         line_count++;
     }
 
-    if (CLASSIC == format)
-    {
-        printf("Line count: %d \n", line_count);
-        double mean   = hdr_mean(h)   / value_scale;
-        double stddev = hdr_stddev(h) / value_scale;
-        double max    = hdr_max(h)    / value_scale;
+    printf("Line count: %d \n", line_count);
+    double mean   = hdr_mean(h)   / value_scale;
+    double stddev = hdr_stddev(h) / value_scale;
+    double max    = hdr_max(h)    / value_scale;
 
-        if (fprintf(
-                stream, CLASSIC_FOOTER,  mean, stddev, max,
-                h->total_count, h->bucket_count, h->sub_bucket_count) < 0)
-        {
-            rc = EIO;
-            goto cleanup;
-        }
+    if (fprintf(
+            stream, CLASSIC_FOOTER,  mean, stddev, max,
+            h->total_count, h->bucket_count, h->sub_bucket_count) < 0)
+    {
+        rc = EIO;
+        goto cleanup;
     }
 
 
@@ -1233,7 +1215,7 @@ int hdr_percentiles_print(
 }
 
 // RP: TEST LOG PRINT
-void hdr_logarithmic_print(
+void yb_get_hdr_histogram(
         struct hdr_histogram* h, int64_t value_units_first_bucket, char* result)
 {
     int rc = 0;
