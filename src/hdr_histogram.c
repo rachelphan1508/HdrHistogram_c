@@ -1215,12 +1215,14 @@ int hdr_percentiles_print(
 }
 
 // RP: TEST LOG PRINT
-void yb_get_hdr_histogram(
-        struct hdr_histogram* h, int64_t value_units_first_bucket, char* result)
+const char* get_hdr_histogram(
+        struct hdr_histogram* h, int64_t value_units_first_bucket)
 {
     int rc = 0;
     struct hdr_iter iter;
     struct hdr_iter_log * log;
+    char * result;
+    result = malloc(1000);
 
     hdr_iter_log_init(&iter, h, value_units_first_bucket,2.0);
 
@@ -1237,13 +1239,15 @@ void yb_get_hdr_histogram(
         if (!finished)
         {
             snprintf(buf, 100,"%lld-%lld: %lld, ",iter.value_iterated_from, iter.value_iterated_to, total_count);
-            strcat(result,buf);
+            strncat(result, buf, strlen(buf));
         }
         else
         {
             snprintf(buf, 100,"%lld-%lld: %lld. ",iter.value_iterated_from, iter.value_iterated_to, total_count);
-            strcat(result,buf);
+            strncat(result, buf, strlen(buf));
         }
         index++;
+
     }
+    return result;
 }
