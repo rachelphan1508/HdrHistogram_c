@@ -44,7 +44,7 @@ int main()
     for (i = 0; i < 100000; i++)
     {
         value = rand() % 9000000 + 1;
-        hdr_record_value(histogram, value);
+        hdr_record_value_atomic(histogram, value);
     }
     // hdr_record_value(histogram, 13);
     // hdr_record_value(histogram, 3);
@@ -69,9 +69,7 @@ int main()
 
     printf("\n\nLogarithmic Printing\n");
 
-    char result[1000];
-
-    yb_get_hdr_histogram(histogram,1, &result);
+    const char* result = get_hdr_histogram(histogram,1);
     printf("%s", result);
 
     return 0;
