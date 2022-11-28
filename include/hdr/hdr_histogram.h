@@ -473,8 +473,8 @@ int hdr_percentiles_print(
     struct hdr_histogram* h, FILE* stream, int32_t ticks_per_half_distance,
     double value_scale);
 
-void yb_get_hdr_histogram(
-    struct hdr_histogram* h, int64_t value_units_first_bucket, char* result);
+const char * get_hdr_histogram(
+    struct hdr_histogram* h, int64_t value_units_first_bucket);
 
 /**
 * Internal allocation methods, used by hdr_dbl_histogram.
