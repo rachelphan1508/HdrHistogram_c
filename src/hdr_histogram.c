@@ -1207,10 +1207,12 @@ int hdr_percentiles_print(
     return rc;
 }
 
+
 const char* get_hdr_histogram(
         struct hdr_histogram* h, int64_t value_units_first_bucket)
 {
     struct hdr_iter iter;
+
     char * result;
     result = malloc(2000);
 
