@@ -165,7 +165,6 @@ static int32_t count_leading_zeros_64(int64_t value)
 #endif
 }
 
-// RP: get bucket index
 static int32_t get_bucket_index(const struct hdr_histogram* h, int64_t value)
 {
     int32_t pow2ceiling = 64 - count_leading_zeros_64(value | h->sub_bucket_mask); /* smallest power of 2 containing value */
@@ -381,9 +380,7 @@ int hdr_calculate_bucket_config(
         return EINVAL;
     }
 
-    // change to test
     cfg->bucket_count = buckets_needed_to_cover_value(highest_trackable_value, cfg->sub_bucket_count, (int32_t)cfg->unit_magnitude);
-    //cfg->bucket_count = 50;
     cfg->counts_len = (cfg->bucket_count + 1) * (cfg->sub_bucket_count / 2);
 
     return 0;
@@ -403,7 +400,7 @@ void hdr_init_preallocated(struct hdr_histogram* h, struct hdr_histogram_bucket_
     h->max_value                       = 0;
     h->normalizing_index_offset        = 0;
     h->conversion_ratio                = 1.0;
-    h->bucket_count                    = cfg->bucket_count; //
+    h->bucket_count                    = cfg->bucket_count;
     h->counts_len                      = cfg->counts_len;
     h->total_count                     = 0;
 }
@@ -509,7 +506,6 @@ bool hdr_record_values(struct hdr_histogram* h, int64_t value, int64_t count)
 
     counts_inc_normalised(h, counts_index, count);
 
-    // RP: this is just to keep track of the min and max values in the histogram
     update_min_max(h, value);
 
     return true;
@@ -695,13 +691,10 @@ int64_t hdr_value_at_percentile(const struct hdr_histogram* h, double percentile
     int64_t count_at_percentile =
         (int64_t) (((requested_percentile / 100) * h->total_count) + 0.5);
     int64_t value_from_idx = get_value_from_idx_up_to_count(h, count_at_percentile);
-    printf("val from index: %lld, percentile: %lf \n", value_from_idx, percentile);
     if (percentile == 0.0)
     {
         return lowest_equivalent_value(h, value_from_idx);
     }
-    int64_t v = highest_equivalent_value(h, value_from_idx);
-    printf("v: %lld", v);
     return highest_equivalent_value(h, value_from_idx);
 }
 
@@ -1214,27 +1207,22 @@ int hdr_percentiles_print(
     return rc;
 }
 
-// RP: TEST LOG PRINT
 const char* get_hdr_histogram(
         struct hdr_histogram* h, int64_t value_units_first_bucket)
 {
-    int rc = 0;
     struct hdr_iter iter;
-    struct hdr_iter_log * log;
     char * result;
-    result = malloc(1000);
+    result = malloc(2000);
 
-    hdr_iter_log_init(&iter, h, value_units_first_bucket,2.0);
-
-    log = &iter.specifics.log;
-    int32_t index = 0;
+    hdr_iter_log_init(&iter, h, value_units_first_bucket,2);
+    int64_t total_count = 0;
 
     bool finished = false;
     while(hdr_iter_next(&iter))
     {
         struct hdr_iter iterCopy = iter;
-        int64_t total_count = iter.specifics.log.count_added_in_this_iteration_step;
-        char* buf[100];
+        total_count = iter.specifics.log.count_added_in_this_iteration_step;
+        char buf[100];
         if (!hdr_iter_next(&iterCopy)) finished = true;
         if (!finished)
         {
@@ -1243,11 +1231,9 @@ const char* get_hdr_histogram(
         }
         else
         {
-            snprintf(buf, 100,"%lld-%lld: %lld. ",iter.value_iterated_from, iter.value_iterated_to, total_count);
-            strncat(result, buf, strlen(buf));
+           snprintf(buf, 100,"%lld-%lld: %lld. ",iter.value_iterated_to, iter.specifics.log.next_value_reporting_level_lowest_equivalent, total_count);
+           strncat(result, buf, strlen(buf));
         }
-        index++;
-
     }
     return result;
 }
