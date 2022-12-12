@@ -411,7 +411,7 @@ int hdr_init(
         int significant_figures,
         struct hdr_histogram** result)
 {
-    int64_t* counts;
+    //int64_t* counts; -- comment counts' related things because of fixed size, YB is using yb_hdr_init instead
     struct hdr_histogram_bucket_config cfg;
     struct hdr_histogram* histogram;
 
@@ -421,20 +421,20 @@ int hdr_init(
         return r;
     }
 
-    counts = (int64_t*) hdr_calloc((size_t) cfg.counts_len, sizeof(int64_t));
-    if (!counts)
-    {
-        return ENOMEM;
-    }
+    // counts = (int64_t*) hdr_calloc((size_t) cfg.counts_len, sizeof(int64_t));
+    // if (!counts)
+    // {
+    //     return ENOMEM;
+    // }
 
-    histogram = (struct hdr_histogram*) hdr_calloc(1, sizeof(struct hdr_histogram));
+    // histogram = (struct hdr_histogram*) hdr_calloc(1, sizeof(struct hdr_histogram));
     if (!histogram)
     {
-        hdr_free(counts);
+        //hdr_free(counts);
         return ENOMEM;
     }
 
-    histogram->counts = counts;
+    //histogram->counts = counts;
 
     hdr_init_preallocated(histogram, &cfg);
     *result = histogram;
@@ -445,7 +445,7 @@ int hdr_init(
 void hdr_close(struct hdr_histogram* h)
 {
     if (h) {
-	hdr_free(h->counts);
+	// hdr_free(h->counts); -- comment this because of fixed size, YB is using yb_hdr_init instead
 	hdr_free(h);
     }
 }
@@ -788,6 +788,11 @@ int64_t hdr_count_at_value(const struct hdr_histogram* h, int64_t value)
 int64_t hdr_count_at_index(const struct hdr_histogram* h, int32_t index)
 {
     return counts_get_normalised(h, index);
+}
+
+void hdr_set_auto_resize(struct hdr_histogram* h, bool value)
+{
+    h->auto_resize = value;
 }
 
 
@@ -1207,33 +1212,19 @@ int hdr_percentiles_print(
     return rc;
 }
 
-const char* get_hdr_histogram(
-        struct hdr_histogram* h, int64_t value_units_first_bucket)
+int yb_hdr_init(
+        int64_t lowest_discernible_value,
+        int64_t highest_trackable_value,
+        int significant_figures,
+        struct hdr_histogram* histogram)
 {
-    struct hdr_iter iter;
-    char * result;
-    result = malloc(2000);
-
-    hdr_iter_log_init(&iter, h, value_units_first_bucket,2);
-    int64_t total_count = 0;
-
-    bool finished = false;
-    while(hdr_iter_next(&iter))
+    struct hdr_histogram_bucket_config cfg;
+    int r = hdr_calculate_bucket_config(lowest_discernible_value, highest_trackable_value, significant_figures, &cfg);
+    if (r)
     {
-        struct hdr_iter iterCopy = iter;
-        total_count = iter.specifics.log.count_added_in_this_iteration_step;
-        char buf[100];
-        if (!hdr_iter_next(&iterCopy)) finished = true;
-        if (!finished)
-        {
-            snprintf(buf, 100,"%lld-%lld: %lld, ",iter.value_iterated_from, iter.value_iterated_to, total_count);
-            strncat(result, buf, strlen(buf));
-        }
-        else
-        {
-           snprintf(buf, 100,"%lld-%lld: %lld. ",iter.value_iterated_to, iter.specifics.log.next_value_reporting_level_lowest_equivalent, total_count);
-           strncat(result, buf, strlen(buf));
-        }
+        return r;
     }
-    return result;
+    hdr_init_preallocated(histogram, &cfg);
+
+    return 0;
 }

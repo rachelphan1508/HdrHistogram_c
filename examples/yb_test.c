@@ -21,47 +21,30 @@
 #pragma warning(disable: 4996)
 #endif
 
-// long get_mem_usage() {
-//     struct rusage myusage;
-//     getrusage(RUSAGE_SELF, &myusage);
-//     return myusage.ru_maxrss;
-// }
-//static struct hdr_histogram* histogram = NULL;
-
 
 int main()
 {
     //srand(time(NULL));
-    //long initial_usage = get_mem_usage();
     int i, value;
-    // char* result;
-    struct hdr_histogram* histogram;
+    struct hdr_histogram* histogram = (struct hdr_histogram*) calloc(1, sizeof(struct hdr_histogram));;
 
     // lower bound: 0ms, upper bound: 900,000ms
-    hdr_init(1, 9000000, 2, &histogram);
-
+    yb_hdr_init(1, 9000000, 2, histogram);
+    hdr_set_auto_resize(histogram, true);
 
     for (i = 0; i < 100; i++)
     {
         value = rand() % 9000000 + 1;
-        hdr_record_value_atomic(histogram, value);
+        hdr_record_value(histogram, value);
     }
 
-    //printf("rusage: %lld + %lld\n", initial_usage, get_mem_usage()-initial_usage);
-
-    int p95 = hdr_value_at_percentile(histogram, 90.0);
-    printf("p95: %d\n", p95);
+    printf("Counts: %d \n", histogram->counts_len);
 
     int mem = hdr_get_memory_size(histogram);
     printf("Footprint: %d \n", mem);
 
     printf("\nPercentiles Printing\n\n");
     hdr_percentiles_print(histogram,stdout,5,1.0);
-
-    printf("\n\nLogarithmic Printing\n");
-
-    const char* result = get_hdr_histogram(histogram,1);
-    printf("%s", result);
 
     return 0;
 }

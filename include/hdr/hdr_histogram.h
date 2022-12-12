@@ -10,6 +10,9 @@
 #ifndef HDR_HISTOGRAM_H
 #define HDR_HISTOGRAM_H 1
 
+#define YB_HISTOGRAM_SIZE 18536
+#define YB_NUM_BINS 2304
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -32,7 +35,12 @@ struct hdr_histogram
     double conversion_ratio;
     int32_t counts_len;
     int64_t total_count;
-    int64_t* counts;
+
+    // int64_t *counts; - comment this because of fixed size array
+    int64_t counts[YB_NUM_BINS];
+
+    // support for dynamic sizing
+    bool auto_resize;
 };
 
 #ifdef __cplusplus
@@ -339,6 +347,8 @@ int64_t hdr_count_at_index(const struct hdr_histogram* h, int32_t index);
 
 int64_t hdr_value_at_index(const struct hdr_histogram* h, int32_t index);
 
+void hdr_set_auto_resize(struct hdr_histogram* h, bool value);
+
 struct hdr_iter_percentiles
 {
     bool seen_last_value;
@@ -468,9 +478,6 @@ int hdr_percentiles_print(
     struct hdr_histogram* h, FILE* stream, int32_t ticks_per_half_distance,
     double value_scale);
 
-const char * get_hdr_histogram(
-    struct hdr_histogram* h, int64_t value_units_first_bucket);
-
 /**
 * Internal allocation methods, used by hdr_dbl_histogram.
 */
@@ -507,6 +514,12 @@ int64_t hdr_median_equivalent_value(const struct hdr_histogram* h, int64_t value
  * and other custom serialisation tools.
  */
 void hdr_reset_internal_counters(struct hdr_histogram* h);
+
+int yb_hdr_init(
+        int64_t lowest_discernible_value,
+        int64_t highest_trackable_value,
+        int significant_figures,
+        struct hdr_histogram* histogram);
 
 #ifdef __cplusplus
 }
