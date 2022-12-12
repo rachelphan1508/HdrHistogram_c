@@ -28,7 +28,7 @@ int main()
     int i, value;
     struct hdr_histogram* histogram = (struct hdr_histogram*) calloc(1, sizeof(struct hdr_histogram));;
 
-    // lower bound: 0ms, upper bound: 900,000ms
+    // lower bound: 1ms, upper bound: 900,000ms
     yb_hdr_init(1, 9000000, 2, histogram);
     hdr_set_auto_resize(histogram, true);
 
